@@ -1,15 +1,17 @@
 import cards
 import network
+import time
 
 class Player:
     def __init__(self):
         self.cards = []
-        self.coins = 1000
+        self.coins = 10000
         self.id = None
         self.server = None
         self.s = None
         self.main()
-        self.playing = False
+        self.playing=False
+        self.letstart=None
 
     def send(self, msg):
         if self.s is None:
@@ -23,18 +25,15 @@ class Player:
 
     def wait(self):
         print('Ожидание карт')
-        print()
         for i in range(2):
             self.cards.append(self.recv())
             print('Получена карта', self.cards[-1])
-            print()
 
     def round(self):
         message = self.recv()
         while 'ask' in message or 'info' in message:
             if 'info' in message:
                 print(message)
-                print()
             if 'ask' in message:
                 while True:
                     ans = input('сделайте ваш ход (pass(p)/call(c)/rise(r)): ')
@@ -51,7 +50,6 @@ class Player:
                         print('я вас не понимаю')
             message = self.recv()
         print(message)
-        print()
 
     def game(self):
         for i in range(4):
@@ -59,21 +57,23 @@ class Player:
 
     def main(self):
         if input('Подключиться к серверу (yes(y)/no(n))?: ').lower() == 'y':
-            self.playing = True
+            print(self.recv())#Логин
+            self.send(input())
+            self.playing=True
+            print(self.recv())#Добро пожаловать
+            money = self.recv()
+            self.send("All is norm")
+            print('Ваши деньги:' + money + "\n")
             print("Регистрация на сервере успешно выполнена.")
+            self.id = self.recv()
+            time.sleep(0.1)
             while self.playing:
-                self.id = self.recv()
+                self.letstart=self.recv()
                 self.wait()
                 self.game()
-                self.getout()
+            #print('Ваши деньги:' + money + "\n")
         else:
             print('By!')
             exit(0)
-            
-    def getout(self):
-        qst = input('Вы хотите выйти из игры? (yes(y)/no(n))?: ').lower()
-        if qst == 'y':
-            print('By!')
-            self.playing = False
 
 player = Player()

@@ -1,13 +1,23 @@
 import diler
 import cards
 import network
+import time
 
 class Game:
     def __init__(self):
         self.d = diler.Diler(self)
+        self.logins = {}
+        self.money = 10000
         self.clients = [] #[(conn, addr)]
         self.server = network.Server()
+        try:
+            self.f = open('file.txt', 'a')
+        except IOError as e:
+            print('Файла с логинами не существует!')
+            print('Создаю новый файл')
+            self.f = open('file.txt', 'w+')
         self.main()
+
 
     def main(self):
         ans = ''
@@ -22,14 +32,43 @@ class Game:
                 self.start()
             elif ans == 'q':
                 print('By!')
+                self.f = open('file.txt', 'a')
+                for log, mon in self.logins.items():
+                    self.f.write(log + '.' + str(mon) + '\n')
+                self.f.close()
                 exit(0)
             else:
                 print('Команда не распознана')
 
+    def fromFiletoDict(self, File):
+        for line in open(File.name):
+            self.logins[line[:line.index('.')]] = line[line.index('.')+1:]
+
     def accept(self):
+        self.money = 10000
         self.clients.append(self.server.accept())
         print('Установлена связь с клиентом', self.clients[-1][1][1])
+        self.send((self.clients[-1][0]), 'Введите ваш логин:')
+        s = self.recv(self.clients[-1][0])
+        print('Clients Login = ' + s)
+        try: #проверяем сущесвтование файла
+            self.f = open('file.txt')
+            self.fromFiletoDict(self.f)
+            if not(s in self.logins.keys()):
+                self.send(self.clients[-1][0], 'Добро пожаловать, новый игрок')
+                self.logins[s] = self.money #10000 - изначальное кол-во денег
+            else:
+                self.money = int(self.logins[s])
+                self.send(self.clients[-1][0], 'Добро пожаловать ' + s)
+        except FileNotFoundError as e:
+            if not(s in self.logins):
+                self.send(self.clients[-1][0], 'Добро пожаловать, новый игрок')
+                self.logins[s] = self.money #10000 - изначальное кол-во денег
+
+        self.send(self.clients[-1][0], str(self.money))
+        self.recv(self.clients[-1][0])
         self.send((self.clients[-1][0]), str(self.clients[-1][1][1]))
+
 
     def send(self, conn, msg):
         self.server.send(conn, msg)
@@ -40,6 +79,7 @@ class Game:
     def start(self):
         for i in range(2):
             self.dispense()
+        time.sleep(0.1)
         self.broadcast(self.d.flop())
         self.broadcast(self.d.turn())
         self.broadcast(self.d.river())
